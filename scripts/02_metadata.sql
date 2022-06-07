@@ -26,7 +26,7 @@ BEGIN
                 gn_meta.t_acquisition_frameworks
             WHERE
                 acquisition_framework_name = _name;
-        RAISE NOTICE 'Acquisition framework named % already exists', _name;
+        RAISE DEBUG 'Acquisition framework named % already exists', _name;
     ELSE
 
         INSERT INTO
@@ -37,7 +37,7 @@ BEGIN
             VALUES
                 (_name, _desc, _startdate, now())
             RETURNING id_acquisition_framework INTO the_new_id;
-        RAISE NOTICE 'Acquisition framework named % inserted with id %', _name, the_new_id;
+        RAISE DEBUG 'Acquisition framework named % inserted with id %', _name, the_new_id;
     END IF;
     RETURN the_new_id;
 END
@@ -52,7 +52,6 @@ COMMENT ON FUNCTION src_dbchirogcra.fct_c_get_or_insert_basic_acquisition_framew
 ;
 
 
-
 /* Function to get id_dataset from id_study */
 
 DROP FUNCTION IF EXISTS src_dbchirogcra.fct_c_get_dataset_from_id_study(_id_study INT)
@@ -65,25 +64,31 @@ DECLARE
     the_id_dataset INT ;
 BEGIN
     IF (SELECT
-            exists(SELECT 1 FROM
-            gn_meta.t_datasets
-                JOIN src_dbchirogcra.management_study ON unique_dataset_id = uuid
-        WHERE
-            id_study = _id_study)) THEN
-    SELECT
-        id_dataset
-        INTO the_id_dataset
-        FROM
-            gn_meta.t_datasets
-                JOIN src_dbchirogcra.management_study ON unique_dataset_id = uuid
-        WHERE
-            id_study = _id_study;
+            exists(SELECT
+                       1
+                       FROM
+                           gn_meta.t_datasets
+                               JOIN src_dbchirogcra.management_study ON unique_dataset_id = uuid
+                       WHERE
+                           id_study = _id_study)) THEN
+        SELECT
+            id_dataset
+            INTO the_id_dataset
+            FROM
+                gn_meta.t_datasets
+                    JOIN src_dbchirogcra.management_study ON unique_dataset_id = uuid
+            WHERE
+                id_study = _id_study;
     ELSE
-        SELECT id_dataset INTO the_id_dataset
-        FROM
-            gn_meta.t_datasets where t_datasets.dataset_shortname like gn_commons.get_default_parameter(
-            'dbchiro_default_dataset_shortname') ;
-        END IF;
+        SELECT
+            id_dataset
+            INTO the_id_dataset
+            FROM
+                gn_meta.t_datasets
+            WHERE
+                    t_datasets.dataset_shortname LIKE gn_commons.get_default_parameter(
+                        'dbchiro_default_dataset_shortname');
+    END IF;
     RETURN the_id_dataset;
 END
 $$ LANGUAGE plpgsql
@@ -159,10 +164,7 @@ BEGIN
       , TRUE                  AS terrestrial_domain
       , new.timestamp_create  AS meta_create_date
       , new.timestamp_update  AS meta_update_date
-    ON CONFLICT (unique_dataset_id)
-        DO UPDATE
-        SET
-            (dataset_name, dataset_shortname, dataset_desc, meta_update_date) = (new.name, new.name, new.comment, new.timestamp_update);
+    ON CONFLICT (unique_dataset_id) DO NOTHING;
     RETURN new;
 END
 $$
@@ -183,7 +185,9 @@ EXECUTE PROCEDURE src_dbchirogcra.fct_tri_c_upsert_dataset()
 
 /* Trigger dbChiro delete Study > GeoNature Datasets */
 
-DROP FUNCTION IF EXISTS src_dbchirogcra.fct_tri_c_delete_study_from_geonature() CASCADE;
+DROP FUNCTION IF EXISTS src_dbchirogcra.fct_tri_c_delete_study_from_geonature() CASCADE
+;
+
 CREATE OR REPLACE FUNCTION src_dbchirogcra.fct_tri_c_delete_study_from_geonature() RETURNS TRIGGER
     LANGUAGE plpgsql
 AS
@@ -197,16 +201,21 @@ BEGIN
     END IF;
     RETURN old;
 END;
-$$;
+$$
+;
 
-ALTER FUNCTION src_dbchirogcra.fct_tri_c_delete_study_from_geonature() OWNER TO geonature;
+ALTER FUNCTION src_dbchirogcra.fct_tri_c_delete_study_from_geonature() OWNER TO geonature
+;
 
-COMMENT ON FUNCTION src_dbchirogcra.fct_tri_c_delete_study_from_geonature() IS 'Trigger function to delete dataset from geonature when delete study';
+COMMENT ON FUNCTION src_dbchirogcra.fct_tri_c_delete_study_from_geonature() IS 'Trigger function to delete dataset from geonature when delete study'
+;
 
-DROP TRIGGER IF EXISTS tri_c_delete_study_from_geonature ON src_dbchirogcra.management_study;
+DROP TRIGGER IF EXISTS tri_c_delete_study_from_geonature ON src_dbchirogcra.management_study
+;
 
 CREATE TRIGGER tri_c_delete_study_from_geonature
     AFTER DELETE
     ON src_dbchirogcra.management_study
     FOR EACH ROW
-EXECUTE PROCEDURE src_dbchirogcra.fct_tri_c_delete_study_from_geonature();
+EXECUTE PROCEDURE src_dbchirogcra.fct_tri_c_delete_study_from_geonature()
+;
