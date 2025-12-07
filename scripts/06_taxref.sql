@@ -1,4 +1,3 @@
-ROLLBACK ;
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS taxonomie.t_c_taxref_ajout
