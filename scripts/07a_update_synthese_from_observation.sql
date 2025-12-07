@@ -1,6 +1,6 @@
 /* Peuplement auto de la synthèse étendue LPO */
 /* Générer les sources si absentes */
-
+BEGIN;
 DROP TRIGGER IF EXISTS tri_c_upsert_dbchiro_observation_to_geonature ON sights_sighting
 ;
 
@@ -24,28 +24,28 @@ BEGIN
                                 JOIN taxonomie.taxref ON cor_tx.cdnom_taxref = taxref.cd_nom
                        WHERE cor_tx.cdnom_taxref IS NOT NULL
                          AND (
-                                   ss.comment NOT ILIKE '%@VN%'
+                           ss.comment NOT ILIKE '%@VN%'
                                OR ss.comment IS NULL
                            )
                          AND ss.id_sighting = new.id_sighting)
-              /*  , sobs AS (SELECT
-               ss.id_sighting
-               , string_agg(upper(a.last_name) || ' ' || a.first_name, ', ') AS observers
-               FROM
-               sights_sighting ss
-               JOIN dicts_specie ds ON ss.codesp_id = ds.id
-               JOIN sights_session ses ON ss.session_id = ses.id_session
-               LEFT JOIN sights_session_other_observer sos
-               ON sos.session_id = ses.id_session
-               JOIN accounts_profile a ON ses.main_observer_id = a.id
-               LEFT JOIN accounts_profile a2 ON sos.profile_id = a2.id
-               GROUP BY ss.id_sighting)*/
+          /*  , sobs AS (SELECT
+           ss.id_sighting
+           , string_agg(upper(a.last_name) || ' ' || a.first_name, ', ') AS observers
+           FROM
+           sights_sighting ss
+           JOIN dicts_specie ds ON ss.codesp_id = ds.id
+           JOIN sights_session ses ON ss.session_id = ses.id_session
+           LEFT JOIN sights_session_other_observer sos
+           ON sos.session_id = ses.id_session
+           JOIN accounts_profile a ON ses.main_observer_id = a.id
+           LEFT JOIN accounts_profile a2 ON sos.profile_id = a2.id
+           GROUP BY ss.id_sighting)*/
           SELECT DISTINCT obs.uuid                                                               AS unique_id_sinp
                         , ses.uuid                                                               AS unique_id_sinp_grp
                         , source.id_source                                                       AS id_source
                         , NULL::INT                                                              AS id_module
                         , obs.id_sighting                                                        AS entity_source_pk_value
-                        , fct_c_get_dataset_from_id_study(ses.study_id)          AS id_dataset
+                        , fct_c_get_dataset_from_id_study(ses.study_id)                          AS id_dataset
                         , ref_nomenclatures.get_id_nomenclature('NAT_OBJ_GEO', 'In')             AS id_nomenclature_geo_object_nature
                         , ref_nomenclatures.get_id_nomenclature('TYP_GRP', 'NSP')                AS id_nomenclature_grp_typ
                         , CASE
@@ -119,7 +119,7 @@ BEGIN
                ELSE upper(a.last_name) || ' ' || a.first_name
                END                                                                 AS observers*/
                         , upper(a.last_name) || ' ' || a.first_name                              AS determiner
-                        , fct_c_get_id_role_from_dbchiro(a.id)                   AS id_digitiser
+                        , fct_c_get_id_role_from_dbchiro(a.id)                                   AS id_digitiser
                         , NULL::INT                                                              AS id_nomenclature_determination_method
                         , NULL                                                                   AS comment_context
                         , obs.comment                                                            AS comment_description
@@ -132,25 +132,25 @@ BEGIN
                         , ds.common_name_fr                                                      AS common_name
                         , encode(
                   hmac(
-                                  a.last_name || ' ' || a.first_name,
-                                  'cyifoE!A5r',
-                                  'sha1'
-                      ),
+                          a.last_name || ' ' || a.first_name,
+                          'cyifoE!A5r',
+                          'sha1'
+                  ),
                   'hex'
-              )                                                                                  AS pseudo_observer_uid
+                          )                                                                      AS pseudo_observer_uid
                         , obs.breed_colo                                                         AS bat_breed_colo
                         , spl.is_gite                                                            AS bat_is_gite
                         , obs.period                                                             AS bat_period
                         , extract(
                   YEAR
                   FROM ses.date_start
-              )                                                                                  AS date_year
+                          )                                                                      AS date_year
                         , coalesce(
                   coalesce(
                           ses.is_confidential,
                           coalesce(spl.is_hidden, FALSE)
-                      )
-              )                                                                                  AS export_excluded
+                  )
+                          )                                                                      AS export_excluded
                         , mst.name                                                               AS study
                         , dplp.descr                                                             AS geo_accuracy
                         , spl.id_place                                                           AS id_place
@@ -418,8 +418,8 @@ $fct_tri_update_observatio_on_place_update$
 DECLARE
 BEGIN
     UPDATE sights_sighting
-    SET id_sighting=id_sighting,
-        timestamp_update = now()
+    SET id_sighting=id_sighting
+      , timestamp_update = now()
     FROM sights_session
     WHERE sights_session.id_session = sights_sighting.session_id
       AND place_id = new.id_place;
@@ -447,8 +447,8 @@ $fct_tri_update_observation_on_session_update$
 DECLARE
 BEGIN
     UPDATE sights_sighting
-    SET id_sighting=id_sighting,
-        timestamp_update = now()
+    SET id_sighting=id_sighting
+      , timestamp_update = now()
     WHERE new.id_session = sights_sighting.session_id;
     RETURN new;
 END;
@@ -515,3 +515,4 @@ CREATE TRIGGER tri_c_delete_dbchiro_observation_from_geonature
 EXECUTE PROCEDURE fct_tri_c_delete_dbchiro_observation_from_geonature()
 ;
 
+COMMIT;

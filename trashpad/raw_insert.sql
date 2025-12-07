@@ -18,14 +18,14 @@ DELETE
                                                          FROM
                                                              gn_synthese.t_sources
                                                          WHERE
-                                                             name_source LIKE 'dbChiroGCRA'))
+                                                             name_source LIKE 'dbChiroCACCHI'))
 ;
 
 DELETE
     FROM
         gn_synthese.synthese
     WHERE
-            id_source = (SELECT id_source FROM gn_synthese.t_sources WHERE name_source LIKE 'dbChiroGCRA')
+            id_source = (SELECT id_source FROM gn_synthese.t_sources WHERE name_source LIKE 'dbChiroCACCHI')
 ;
 
 INSERT INTO
@@ -159,21 +159,21 @@ SELECT DISTINCT
   , ss.timestamp_update                                                    AS meta_update_date
   , 'I'                                                                    AS last_action
     FROM
-        src_dbchirogcra.sights_sighting ss
-            LEFT JOIN src_dbchirogcra.dicts_specie ds ON ss.codesp_id = ds.id
-            LEFT JOIN src_dbchirogcra.sights_session ses ON ss.session_id = ses.id_session
-            LEFT JOIN src_dbchirogcra.sights_session_other_observer sos ON sos.session_id = ses.id_session
-            LEFT JOIN src_dbchirogcra.accounts_profile a ON ses.main_observer_id = a.id
-            LEFT JOIN src_dbchirogcra.accounts_profile a2 ON sos.profile_id = a2.id
-            LEFT JOIN src_dbchirogcra.sights_place s2 ON ses.place_id = s2.id_place
-            LEFT JOIN src_dbchirogcra.dicts_typeplace typeplace ON s2.type_id = typeplace.id
-            LEFT JOIN src_dbchirogcra.dicts_contact c2 ON ses.contact_id = c2.id
-            LEFT JOIN src_dbchirogcra.geodata_municipality m2 ON s2.municipality_id = m2.id
-            LEFT JOIN src_dbchirogcra.sights_countdetail scd ON ss.id_sighting = scd.sighting_id
+        dbchiro.sights_sighting ss
+            LEFT JOIN dbchiro.dicts_specie ds ON ss.codesp_id = ds.id
+            LEFT JOIN dbchiro.sights_session ses ON ss.session_id = ses.id_session
+            LEFT JOIN dbchiro.sights_session_other_observer sos ON sos.session_id = ses.id_session
+            LEFT JOIN dbchiro.accounts_profile a ON ses.main_observer_id = a.id
+            LEFT JOIN dbchiro.accounts_profile a2 ON sos.profile_id = a2.id
+            LEFT JOIN dbchiro.sights_place s2 ON ses.place_id = s2.id_place
+            LEFT JOIN dbchiro.dicts_typeplace typeplace ON s2.type_id = typeplace.id
+            LEFT JOIN dbchiro.dicts_contact c2 ON ses.contact_id = c2.id
+            LEFT JOIN dbchiro.geodata_municipality m2 ON s2.municipality_id = m2.id
+            LEFT JOIN dbchiro.sights_countdetail scd ON ss.id_sighting = scd.sighting_id
             --  jointure pour récupérer les uuid
 --             LEFT JOIN src_lpodatas.observations obs ON obs.source_id_data = ss.id_sighting
             LEFT JOIN src_dbchiro.cor_sp_dbchiro_taxref cor_tx ON cor_tx.idsp_dbchiro = ds.id
-      , (SELECT id_source FROM gn_synthese.t_sources WHERE name_source LIKE 'dbChiroGCRA') AS source
+      , (SELECT id_source FROM gn_synthese.t_sources WHERE name_source LIKE 'dbChiroCACCHI') AS source
       , (SELECT id_dataset FROM gn_meta.t_datasets WHERE dataset_shortname LIKE 'Dbchiro') AS dataset
     WHERE
           cor_tx.cdnom_taxref IS NOT NULL
@@ -220,16 +220,16 @@ SELECT
   , sights_place.name                                                                           AS place
   , NOT sights_sighting.is_doubtful                                                             AS is_valid
     FROM
-        src_dbchirogcra.sights_sighting
+        dbchiro.sights_sighting
             JOIN gn_synthese.synthese ON sights_sighting.id_sighting = synthese.entity_source_pk_value::INT
-            JOIN src_dbchirogcra.dicts_specie ON sights_sighting.codesp_id = dicts_specie.id
-            JOIN src_dbchirogcra.sights_session ON sights_sighting.session_id = sights_session.id_session
-            LEFT JOIN src_dbchirogcra.management_study ON sights_session.study_id = management_study.id_study
-            JOIN src_dbchirogcra.sights_place ON sights_session.place_id = sights_place.id_place
-            JOIN src_dbchirogcra.accounts_profile ON sights_session.main_observer_id = accounts_profile.id
-            JOIN src_dbchirogcra.dicts_placeprecision ON sights_place.precision_id = dicts_placeprecision.id
+            JOIN dbchiro.dicts_specie ON sights_sighting.codesp_id = dicts_specie.id
+            JOIN dbchiro.sights_session ON sights_sighting.session_id = sights_session.id_session
+            LEFT JOIN dbchiro.management_study ON sights_session.study_id = management_study.id_study
+            JOIN dbchiro.sights_place ON sights_session.place_id = sights_place.id_place
+            JOIN dbchiro.accounts_profile ON sights_session.main_observer_id = accounts_profile.id
+            JOIN dbchiro.dicts_placeprecision ON sights_place.precision_id = dicts_placeprecision.id
     WHERE
-            synthese.id_source = (SELECT id_source FROM gn_synthese.t_sources WHERE name_source LIKE 'dbChiroGCRA')
+            synthese.id_source = (SELECT id_source FROM gn_synthese.t_sources WHERE name_source LIKE 'dbChiroCACCHI')
 ;
 
 COMMIT

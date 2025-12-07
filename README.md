@@ -6,6 +6,7 @@ Ce projet contient les scripts pour alimenter automatiquement une instance GeoNa
 Le prérequis est que la base de données dbChiro soit intégré dans la base de données GeoNature (dans un schéma spécifique).
 
 Ces scripts alimentent automatiquement les modules suivants:
+
 * Métadonnées : 
     * Création d'un Cadre d'acquisition par défaut pour receuillir les jeux de données orphelins
     * Création des jeux de données à partir des études dbChiro
@@ -14,4 +15,6 @@ Ces scripts alimentent automatiquement les modules suivants:
     * Création automatique des utilisateurs dbChiro dans UsersHub, sans droits particuliers (création uniquement dans utilisateurs.t_roles).
     
 * Synthèse:
-    * Création automatique des occurences dans la synthèse (version simplifiée, niveau session/taxon).
+    * Création automatique des occurences dans la synthèse. Deux possibilités:
+        * version simplifiée, niveau session/taxon > éxécuter `07a_update_synthese_from_observation.sql`
+        * version détaillée (**recommandé**), niveau dénombrement détaillé > éxécuter `07b_update_synthese_from_countdetail.sql`
