@@ -7,20 +7,101 @@ BEGIN;
 DROP FUNCTION IF EXISTS dbchiro.fct_c_create_geonature_observer_from_dbchiro() CASCADE
 ;
 
-CREATE OR REPLACE FUNCTION dbchiro.fct_c_create_geonature_observer_from_dbchiro() RETURNS TRIGGER
+CREATE OR REPLACE FUNCTION src_dbchirogcra.fct_c_create_geonature_observer_from_dbchiro() RETURNS TRIGGER
     LANGUAGE plpgsql
 AS
 $$
+DECLARE
+    _row RECORD;
 BEGIN
-    INSERT INTO utilisateurs.t_roles(nom_role, prenom_role, email, active, date_insert, date_update)
-    VALUES (new.last_name, new.first_name, new.email, FALSE, new.timestamp_create, new.timestamp_update)
+    INSERT INTO utilisateurs.t_roles(nom_role, prenom_role, email, active, date_insert, date_update, champs_addi)
+    VALUES ( new.last_name, new.first_name, new.email, FALSE, new.timestamp_create, new.timestamp_update
+           , JSONB_BUILD_OBJECT('from_dbchiro', JSONB_BUILD_OBJECT('anonymous_in_export', TO_JSONB(new.pseudonymize))))
     ON CONFLICT (email)
-        DO UPDATE SET (nom_role, prenom_role, date_update) = (new.last_name, new.first_name, new.timestamp_update);
-    RAISE NOTICE '%', new;
+        DO UPDATE SET (nom_role, prenom_role, date_update) = (new.last_name, new.first_name, new.timestamp_update)
+                    , champs_addi                          = JSONB_SET(
+                COALESCE(t_roles.champs_addi, '{}'::jsonb),
+                '{from_dbchiro}',
+                COALESCE(t_roles.champs_addi -> 'from_dbchiro', '{}'::jsonb)
+                    || JSONB_BUILD_OBJECT(
+                        'anonymous_in_export',
+                        COALESCE(new.pseudonymize, FALSE)
+                       ),
+                TRUE)
+    RETURNING * INTO _row;
+    RAISE NOTICE '%', _row.champs_addi;
     RETURN new;
 END
 $$
 ;
+CREATE OR REPLACE FUNCTION src_dbchirogcra.fct_c_create_geonature_observer_from_dbchiro()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    _row RECORD;
+BEGIN
+    INSERT INTO utilisateurs.t_roles(
+        nom_role,
+        prenom_role,
+        email,
+        active,
+        date_insert,
+        date_update,
+        champs_addi
+    )
+    VALUES (
+        new.last_name,
+        new.first_name,
+        new.email,
+        FALSE,
+        new.timestamp_create,
+        new.timestamp_update,
+        JSONB_BUILD_OBJECT(
+            'from_dbchiro',
+            JSONB_BUILD_OBJECT(
+                'anonymous_in_export',
+                TO_JSONB(COALESCE(new.pseudonymize, FALSE)),
+                'anonymous_in_export_ts_update',
+                TO_JSONB(now())
+            )
+        )
+    )
+    ON CONFLICT (email)
+    DO UPDATE SET
+        nom_role = new.last_name,
+        prenom_role = new.first_name,
+        date_update = new.timestamp_update,
+        champs_addi = JSONB_SET(
+            COALESCE(t_roles.champs_addi, '{}'::jsonb),
+            '{from_dbchiro}',
+            COALESCE(t_roles.champs_addi -> 'from_dbchiro', '{}'::jsonb)
+            || JSONB_BUILD_OBJECT(
+                'anonymous_in_export',
+                COALESCE(new.pseudonymize, FALSE),
+                'anonymous_in_export_ts_update',
+                CASE
+                    WHEN (
+                        COALESCE(
+                            (t_roles.champs_addi #>> '{from_dbchiro,anonymous_in_export}')::boolean,
+                            FALSE
+                        )
+                        IS DISTINCT FROM COALESCE(new.pseudonymize, FALSE)
+                    )
+                    THEN TO_JSONB(now())
+                    ELSE COALESCE(
+                        t_roles.champs_addi #> '{from_dbchiro,anonymous_in_export_ts_update}',
+                        TO_JSONB(now())
+                    )
+                END
+            ),
+            TRUE
+        )
+    RETURNING * INTO _row;
+    RETURN new;
+END
+$$;
 
 COMMENT ON FUNCTION dbchiro.fct_c_create_geonature_observer_from_dbchiro() IS 'Fonction trigger pour générer les observateurs GeoNature depuis dbChiro'
 ;
